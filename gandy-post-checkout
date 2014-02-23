@@ -1,0 +1,90 @@
+#!/bin/sh
+
+program_name="gandy"
+
+FG_BLACK=30
+FG_RED=31
+FG_GREEN=32
+FG_YELLOW=33
+FG_BLUE=34
+FG_VIOLET=35
+FG_CYAN=36
+FG_WHITE=37
+FG_NULL=00
+BG_NULL=00
+ESC="\033"
+NORMAL="$ESC[m"
+RESET="$ESC[0;${FG_WHITE};${BG_NULL}m"
+BLACK="$ESC[0;${FG_BLACK}m"
+RED="$ESC[0;${FG_RED}m"
+GREEN="$ESC[0;${FG_GREEN}m"
+YELLOW="$ESC[0;${FG_YELLOW}m"
+BLUE="$ESC[0;${FG_BLUE}m"
+VIOLET="$ESC[0;${FG_VIOLET}m"
+CYAN="$ESC[0;${FG_CYAN}m"
+WHITE="$ESC[0;${FG_WHITE}m"
+
+# Test if the first arg is contained in the remainder of the args
+function elementIn () {
+  local e
+  for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
+  return 1
+}
+
+# Clean up gandy refs for non-existent branches
+function clean_gandy_refs() {
+    stored_branches=`git config --get-all $program_name.refs | sed -e 's/.*for //g'`
+    current_cleaned_branches=`git branch | cut -c '3-' | sed -e 's/\//_/g'`
+    echo "Found stored branches: $stored_branches"
+    for stored_branch in $stored_branches; do
+        `echo $current_cleaned_branches | grep -e "^$stored_branch\$"`
+        if test $? != 0; then
+            echo "Didn't find branch $stored_branch."
+        else
+            echo "Found branch in list: $stored_branch"
+        fi
+    done
+}
+
+# If this is a branch checkout (not a file checkout), proceed
+if [ "$3" = "1" ]; then
+    current_head=`git rev-parse HEAD`
+
+    # Retrieve the current branch name
+    branch_name=$(git symbolic-ref -q HEAD)
+    branch_name=${branch_name##refs/heads/}
+    branch_name=${branch_name:-HEAD}
+    clean_branch_name=${branch_name//\//_}
+
+    # Retrieve the latest commit id we ran on for the current branch
+    latest_run_ref=$(git config --get $program_name.refs "for $clean_branch_name\$")
+    latest_run_ref=${latest_run_ref/for $clean_branch_name/}
+    latest_run_ref=${latest_run_ref// /}
+
+    if [ "$latest_run_ref" = "$current_head" ]; then
+        echo "Already ran for this ref. Exiting." # TODO: remove
+        #exit 0
+    fi
+
+    # See if there's a tracking branch for the current branch
+    `git show-ref --verify --quiet refs/remotes/origin/$branch_name`
+    if test $? == 0; then
+
+        # Only proceed if we're up to date with the tracking branch
+        remote_head=`git rev-parse refs/remotes/origin/$branch_name`
+        if [ "$current_head" = "$remote_head" ]; then
+
+            clean_gandy_refs
+
+            echo
+            echo "${YELLOW}*** [gandy] New changes detected. Getting you set up...${NORMAL}"
+            echo
+
+            echo
+            echo "${YELLOW}*** [gandy] Done.${NORMAL}"
+            echo
+            `git config $program_name.refs "$current_head for $clean_branch_name" "for $clean_branch_name\$"`
+        fi
+
+    fi
+fi
