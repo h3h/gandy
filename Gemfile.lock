@@ -1,0 +1,19 @@
+PATH
+  remote: .
+  specs:
+    gandy (0.0.1)
+      colorize (~> 0.6)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    colorize (0.6.0)
+    rake (10.1.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bundler (~> 1.5)
+  gandy!
+  rake

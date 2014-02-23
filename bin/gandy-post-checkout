@@ -24,26 +24,24 @@ VIOLET="$ESC[0;${FG_VIOLET}m"
 CYAN="$ESC[0;${FG_CYAN}m"
 WHITE="$ESC[0;${FG_WHITE}m"
 
-# Test if the first arg is contained in the remainder of the args
-function elementIn () {
-  local e
-  for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
-  return 1
-}
-
 # Clean up gandy refs for non-existent branches
 function clean_gandy_refs() {
     stored_branches=`git config --get-all $program_name.refs | sed -e 's/.*for //g'`
     current_cleaned_branches=`git branch | cut -c '3-' | sed -e 's/\//_/g'`
-    echo "Found stored branches: $stored_branches"
     for stored_branch in $stored_branches; do
-        `echo $current_cleaned_branches | grep -e "^$stored_branch\$"`
-        if test $? != 0; then
-            echo "Didn't find branch $stored_branch."
-        else
-            echo "Found branch in list: $stored_branch"
+        local extracted=${current_cleaned_branches/$stored_branch/}
+        if [[ ${#extracted} -eq ${#current_cleaned_branches} ]]; then
+            `git config --unset $program_name.refs "for $stored_branch\$"`
         fi
     done
+}
+
+function run_rake_task() {
+    local output=`bundle exec bin/rake $program_name:maintain 2>&1`
+    if [[ $? -ne 0 ]]; then
+        echo "${RED}*** [${CYAN}$program_name${RED}] Something went wrong!"
+        exit 1
+    fi
 }
 
 # If this is a branch checkout (not a file checkout), proceed
@@ -68,7 +66,7 @@ if [ "$3" = "1" ]; then
 
     # See if there's a tracking branch for the current branch
     `git show-ref --verify --quiet refs/remotes/origin/$branch_name`
-    if test $? == 0; then
+    if [[ $? -eq 0 ]]; then
 
         # Only proceed if we're up to date with the tracking branch
         remote_head=`git rev-parse refs/remotes/origin/$branch_name`
@@ -77,14 +75,17 @@ if [ "$3" = "1" ]; then
             clean_gandy_refs
 
             echo
-            echo "${YELLOW}*** [gandy] New changes detected. Getting you set up...${NORMAL}"
+            echo "${YELLOW}*** [${CYAN}$program_name${YELLOW}] New changes detected. Getting you set up...${NORMAL}"
             echo
 
+            run_rake_task
+
             echo
-            echo "${YELLOW}*** [gandy] Done.${NORMAL}"
+            echo "${YELLOW}*** [${CYAN}$program_name${YELLOW}] Done.${NORMAL}"
             echo
+
+            # Store most current run ref in config
             `git config $program_name.refs "$current_head for $clean_branch_name" "for $clean_branch_name\$"`
         fi
-
     fi
 fi
