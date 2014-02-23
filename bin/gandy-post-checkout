@@ -1,5 +1,5 @@
 #!/bin/sh
-
+#--gandy-src
 program_name="gandy"
 
 FG_BLACK=30
@@ -89,3 +89,4 @@ if [ "$3" = "1" ]; then
         fi
     fi
 fi
+#--gandy-src

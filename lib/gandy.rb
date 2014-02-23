@@ -1,15 +1,18 @@
+require 'colorize'
 require 'gandy/version'
 
 module Gandy
   def self.print(string, mode=:info)
     if string.respond_to?(:red)
       puts case mode
-      when :info
-        string.light_blue
       when :error
         string.red
       when :warn
         string.yellow
+      when :success
+        string.green
+      else
+        string.light_blue
       end
     else
       puts "[#{mode}] #{string}"
