@@ -1,4 +1,5 @@
 require 'digest'
+require 'fileutils'
 require 'pathname'
 
 module Gandy
@@ -12,6 +13,7 @@ module Gandy
     end
 
     def initialize(current_dir)
+      @bundled_hook_file = Pathname.new(File.expand_path(BUNDLED_HOOK_PATH, __FILE__))
       @current_dir = current_dir
       @hook_file = Pathname.new(HOOK_PATH)
     end
@@ -56,13 +58,14 @@ module Gandy
     end
 
     def hook_file_needs_update?
-      bundled_hook_hash = Digest::SHA256.file(File.expand_path(BUNDLED_HOOK_PATH, __FILE__)).hexdigest
+      bundled_hook_hash = Digest::SHA256.file(@bundled_hook_file).hexdigest
       installed_hook_hash = Digest::SHA256.file(@hook_file).hexdigest
       installed_hook_hash != bundled_hook_hash
     end
 
     def write_hook_file!
-
+      FileUtils.remove_entry(@hook_file)
+      FileUtils.copy(@bundled_hook_file, @hook_file)
     end
   end
 end
