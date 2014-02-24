@@ -1,7 +1,7 @@
 namespace :gandy do
 
   task :install do
-    Gandy::Installer.install!(Dir.pwd)
+    Gandy::Installer.install!
   end
 
   task :maintain do
